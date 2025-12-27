@@ -9,7 +9,9 @@
     "copy-assets": "cp -r src/icons/* dist/icons || true",
     "dev": "tsc --watch",
     "lint": "eslint src/",
-    "test": "jest"
+    "test": "jest",
+    "publish": "npm run build && npm version patch && npm publish",
+    "prepublishOnly": "npm run build"
   },
   "n8n": {
     "nodes": [
