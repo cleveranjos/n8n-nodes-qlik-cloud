@@ -1,7 +1,7 @@
 import type {
 	IExecuteFunctions,
-	IHttpRequestOptions,
 	IHttpRequestMethods,
+	IHttpRequestOptions,
 } from 'n8n-workflow';
 import { NodeApiError } from 'n8n-workflow';
 
@@ -9,9 +9,11 @@ export async function qlikApiRequest(
 	this: IExecuteFunctions,
 	method: IHttpRequestMethods,
 	endpoint: string,
-	body?: Record<string, any>,
+	body?: any,
 	qs?: Record<string, any>,
-): Promise<Record<string, any>> {
+	returnFullResponse: boolean = false,
+	extraOptions: Partial<IHttpRequestOptions> = {},
+): Promise<any> {
 	const credentials = await this.getCredentials('qlikCloudApi');
 
 	if (!credentials) {
@@ -20,17 +22,24 @@ export async function qlikApiRequest(
 		} as any);
 	}
 
-	const baseUrl = credentials.baseUrl as string;
+	const baseUrl = (credentials.baseUrl as string).replace(/\/+$/, '');
 	const accessToken = credentials.accessToken as string;
+	const url = `${baseUrl}${endpoint.startsWith('/') ? endpoint : `/${endpoint}`}`;
+
+	const headers = {
+		Authorization: `Bearer ${accessToken}`,
+		'Content-Type': 'application/json',
+		...(extraOptions.headers || {}),
+	};
 
 	const options: IHttpRequestOptions = {
-		headers: {
-			Authorization: `Bearer ${accessToken}`,
-			'Content-Type': 'application/json',
-		},
 		method,
-		url: `${baseUrl}${endpoint}`,
+		url,
 		qs,
+		json: extraOptions.json ?? true,
+		returnFullResponse,
+		...extraOptions,
+		headers,
 	};
 
 	if (body !== undefined) {
@@ -40,8 +49,9 @@ export async function qlikApiRequest(
 	try {
 		return await this.helpers.httpRequest(options);
 	} catch (error) {
-		throw new NodeApiError(this.getNode(), {
-			message: (error as Error).message,
+		const errMessage = error instanceof Error ? error.message : typeof error === 'string' ? error : JSON.stringify(error);
+		throw new NodeApiError(this.getNode(), { message: errMessage }, {
+			message: 'Qlik Cloud API request failed',
 		} as any);
 	}
 }

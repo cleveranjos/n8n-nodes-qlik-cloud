@@ -1,11 +1,6 @@
-import type {
-	ICredentialType,
-	INodeProperties,
-} from 'n8n-workflow';
+import type { ICredentialType, INodeProperties } from 'n8n-workflow';
 
-const scopes = [
-	'https://analysis.windows.net/powerbi/api/.default',
-];
+const DEFAULT_SCOPES = ['openid', 'profile', 'email', 'offline_access'];
 
 export class QlikCloudOAuth2Api implements ICredentialType {
 	name = 'qlikCloudOAuth2Api';
@@ -28,21 +23,19 @@ export class QlikCloudOAuth2Api implements ICredentialType {
 			name: 'authUrl',
 			type: 'hidden',
 			default: '',
-			required: true,
 		},
 		{
 			displayName: 'Access Token URL',
 			name: 'accessTokenUrl',
 			type: 'hidden',
 			default: '',
-			required: true,
 		},
 		{
 			displayName: 'Scope',
 			name: 'scope',
-			type: 'hidden',
-			default: scopes.join(' '),
-			description: 'OAuth2 scopes required for Qlik Cloud API access',
+			type: 'string',
+			default: DEFAULT_SCOPES.join(' '),
+			description: 'OAuth2 scopes requested from Qlik Cloud (space-separated)',
 		},
 		{
 			displayName: 'Authentication',
@@ -54,27 +47,31 @@ export class QlikCloudOAuth2Api implements ICredentialType {
 
 	async preAuthentication(this: any, credentials: any) {
 		const baseUrl = credentials.baseUrl as string;
-		
-		// Extract tenant and region from base URL
-		// Expected format: https://tenant.region.qlikcloud.com
-		const urlParts = new URL(baseUrl);
-		const hostname = urlParts.hostname;
-		const parts = hostname.split('.');
-		
-		if (parts.length < 3) {
+		let parsed: URL;
+
+		try {
+			parsed = new URL(baseUrl);
+		} catch (error) {
 			throw new Error('Invalid Qlik Cloud tenant URL format');
 		}
 
-		const tenant = parts[0];
-		const region = parts[1];
+		if (parsed.protocol !== 'https:') {
+			throw new Error('Qlik Cloud tenant URL must use HTTPS');
+		}
 
-		// Construct OAuth endpoints
-		const authEndpoint = `https://auth.${region}.qlikcloud.com/oauth/authorize`;
-		const tokenEndpoint = `https://auth.${region}.qlikcloud.com/oauth/token`;
+		if (!parsed.hostname.endsWith('.qlikcloud.com')) {
+			throw new Error('Tenant URL must end with .qlikcloud.com');
+		}
 
-		credentials.authUrl = authEndpoint;
-		credentials.accessTokenUrl = tokenEndpoint;
-		
+		const oauthBase = `${parsed.origin}/oauth`;
+
+		credentials.authUrl = `${oauthBase}/authorize`;
+		credentials.accessTokenUrl = `${oauthBase}/token`;
+
+		if (!credentials.scope) {
+			credentials.scope = DEFAULT_SCOPES.join(' ');
+		}
+
 		return credentials;
 	}
 }

@@ -3,6 +3,33 @@ import type { INodeProperties } from 'n8n-workflow';
 // Get All Assistants
 export const assistantsGetAllDescription: INodeProperties[] = [
 	{
+		displayName: 'Return All',
+		name: 'returnAll',
+		type: 'boolean',
+		default: false,
+		displayOptions: {
+			show: {
+				resource: ['assistants'],
+				operation: ['getAll'],
+			},
+		},
+		description: 'Whether to return all assistants',
+	},
+	{
+		displayName: 'Limit',
+		name: 'limit',
+		type: 'number',
+		default: 50,
+		displayOptions: {
+			show: {
+				resource: ['assistants'],
+				operation: ['getAll'],
+				returnAll: [false],
+			},
+		},
+		description: 'The number of assistants to get',
+	},
+	{
 		displayName: 'Options',
 		name: 'options',
 		type: 'collection',
@@ -15,13 +42,6 @@ export const assistantsGetAllDescription: INodeProperties[] = [
 			},
 		},
 		options: [
-			{
-				displayName: 'Limit',
-				name: 'limit',
-				type: 'number',
-				default: 50,
-				description: 'The number of assistants to get',
-			},
 			{
 				displayName: 'Next Page',
 				name: 'next',

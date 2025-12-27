@@ -9,12 +9,17 @@ Complete integration with Qlik Cloud REST APIs covering:
 ### Apps Management
 - **Get All Apps** - Retrieve all apps with filtering and pagination
 - **Get App** - Retrieve a specific app by ID
-- **Create App** - Create a new app
-- **Update App** - Update app properties
-- **Delete App** - Delete an app
-- **Copy App** - Create a copy of an app
-- **Export App** - Export app data
-- **Publish App** - Publish app to a space
+- **Create / Update / Delete / Copy** - Full CRUD on apps plus copy
+- **Export / Import** - Export apps and import QVF files
+- **Publish / Republish / Move / Remove** - Publish or republish to a space, move between spaces, or remove from a space
+- **Ownership** - Change object owner or update app owner
+- **Data Insights** - Get data lineage, data metadata, list insight analyses, recommend insights, and fetch the insight model
+- **Media** - Upload, download, delete, and list media files; fetch app thumbnail
+- **Reloads** - List reload logs, fetch a specific reload log, and retrieve reload metadata
+- **Report Filters** - List, create, get, update, delete, and count report filters
+- **Scripts** - List, create, get, update, delete scripts
+- **Evaluations** - List/create evaluations, compare evaluations, and download results
+- **Validate Script** - Validate a script payload
 - **Get Privileges** - Retrieve app access privileges
 
 ### Assistants

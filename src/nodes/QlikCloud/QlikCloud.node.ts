@@ -1,5 +1,7 @@
 import type {
+	IDataObject,
 	IExecuteFunctions,
+	IHttpRequestOptions,
 	INodeExecutionData,
 	INodeType,
 	INodeTypeDescription,
@@ -13,6 +15,10 @@ import { auditDescription } from './resources/audits/index';
 import { itemDescription } from './resources/items/index';
 
 const DEFAULT_PAGE_SIZE = 100;
+const BINARY_DOWNLOAD_OPTIONS: Partial<IHttpRequestOptions> = {
+	json: false,
+	encoding: 'arraybuffer',
+};
 
 function extractPageItems(response: any): any[] {
 	const payload = response?.data ?? response;
@@ -86,106 +92,471 @@ async function fetchPaginatedResults(
 	return limit === undefined ? collected : collected.slice(0, limit);
 }
 
-async function handleAppsResource(operation: string, context: IExecuteFunctions): Promise<any> {
-	if (operation === 'getAll') {
-		const returnAll = context.getNodeParameter('returnAll', 0) as boolean;
-		const limit = returnAll ? undefined : (context.getNodeParameter('limit', 0) as number);
-		const options = context.getNodeParameter('options', 0) as any;
-
-		const qs: Record<string, any> = {};
-		if (options.name) {
-			qs.name = options.name;
-		}
-		if (options.spaceId) {
-			qs.spaceId = options.spaceId;
-		}
-
-		return await fetchPaginatedResults(context, '/api/v1/apps', qs, limit);
-	}
-
-	if (operation === 'get') {
-		const appId = context.getNodeParameter('appId', 0) as string;
-		return await qlikApiRequest.call(context, 'GET', `/api/v1/apps/${appId}`);
-	}
-
-	if (operation === 'create') {
-		const name = context.getNodeParameter('name', 0) as string;
-		const options = context.getNodeParameter('options', 0) as any;
-
-		const body = { attributes: { name } };
-		if (options.description) {
-			(body.attributes as any).description = options.description;
-		}
-		if (options.locale) {
-			(body.attributes as any).locale = options.locale;
-		}
-		if (options.spaceId) {
-			(body.attributes as any).spaceId = options.spaceId;
-		}
-
-		return await qlikApiRequest.call(context, 'POST', '/api/v1/apps', body);
-	}
-
-	if (operation === 'update') {
-		const appId = context.getNodeParameter('appId', 0) as string;
-		const body = context.getNodeParameter('body', 0) as any;
-		return await qlikApiRequest.call(context, 'PUT', `/api/v1/apps/${appId}`, body);
-	}
-
-	if (operation === 'delete') {
-		const appId = context.getNodeParameter('appId', 0) as string;
-		await qlikApiRequest.call(context, 'DELETE', `/api/v1/apps/${appId}`);
-		return { success: true };
-	}
-
-	if (operation === 'copy') {
-		const appId = context.getNodeParameter('appId', 0) as string;
-		const name = context.getNodeParameter('name', 0) as string;
-		const options = context.getNodeParameter('options', 0) as any;
-
-		const body = { attributes: { name } };
-		if (options.description) {
-			(body.attributes as any).description = options.description;
-		}
-		if (options.spaceId) {
-			(body.attributes as any).spaceId = options.spaceId;
-		}
-
-		return await qlikApiRequest.call(context, 'POST', `/api/v1/apps/${appId}/copy`, body);
-	}
-
-	if (operation === 'export') {
-		const appId = context.getNodeParameter('appId', 0) as string;
-		return await qlikApiRequest.call(context, 'POST', `/api/v1/apps/${appId}/export`, {});
-	}
-
-	if (operation === 'publish') {
-		const appId = context.getNodeParameter('appId', 0) as string;
-		const options = context.getNodeParameter('publishOptions', 0) as any;
-
-		const body: any = {};
-		if (options.spaceId) {
-			body.spaceId = options.spaceId;
-		}
-
-		return await qlikApiRequest.call(context, 'POST', `/api/v1/apps/${appId}/publish`, body);
-	}
-
-	if (operation === 'privileges') {
-		return await qlikApiRequest.call(context, 'GET', '/api/v1/apps/privileges');
-	}
-
-	throw new NodeOperationError(context.getNode(), `Unknown operation: ${operation}`);
+function encodeMediaPath(path: string): string {
+	return encodeURIComponent(path).replace(/%2F/g, '/');
 }
 
-async function handleAssistantsResource(operation: string, context: IExecuteFunctions): Promise<any> {
+async function handleAppsResource(
+	operation: string,
+	context: IExecuteFunctions,
+	itemIndex: number,
+): Promise<any> {
+	switch (operation) {
+		case 'getAll': {
+			const returnAll = context.getNodeParameter('returnAll', itemIndex) as boolean;
+			const limit = returnAll ? undefined : (context.getNodeParameter('limit', itemIndex) as number);
+			const options = context.getNodeParameter('options', itemIndex) as any;
+
+			const qs: Record<string, any> = {};
+			if (options.name) {
+				qs.name = options.name;
+			}
+			if (options.spaceId) {
+				qs.spaceId = options.spaceId;
+			}
+
+			return await fetchPaginatedResults(context, '/api/v1/apps', qs, limit);
+		}
+		case 'get': {
+			const appId = context.getNodeParameter('appId', itemIndex) as string;
+			return await qlikApiRequest.call(context, 'GET', `/api/v1/apps/${appId}`);
+		}
+		case 'create': {
+			const name = context.getNodeParameter('name', itemIndex) as string;
+			const options = context.getNodeParameter('options', itemIndex) as any;
+
+			const body = { attributes: { name } };
+			if (options.description) {
+				(body.attributes as any).description = options.description;
+			}
+			if (options.locale) {
+				(body.attributes as any).locale = options.locale;
+			}
+			if (options.spaceId) {
+				(body.attributes as any).spaceId = options.spaceId;
+			}
+
+			return await qlikApiRequest.call(context, 'POST', '/api/v1/apps', body);
+		}
+		case 'update': {
+			const appId = context.getNodeParameter('appId', itemIndex) as string;
+			const body = context.getNodeParameter('body', itemIndex) as any;
+			return await qlikApiRequest.call(context, 'PUT', `/api/v1/apps/${appId}`, body);
+		}
+		case 'delete': {
+			const appId = context.getNodeParameter('appId', itemIndex) as string;
+			await qlikApiRequest.call(context, 'DELETE', `/api/v1/apps/${appId}`);
+			return { success: true };
+		}
+		case 'copy': {
+			const appId = context.getNodeParameter('appId', itemIndex) as string;
+			const name = context.getNodeParameter('name', itemIndex) as string;
+			const options = context.getNodeParameter('options', itemIndex) as any;
+
+			const body = { attributes: { name } };
+			if (options.description) {
+				(body.attributes as any).description = options.description;
+			}
+			if (options.spaceId) {
+				(body.attributes as any).spaceId = options.spaceId;
+			}
+
+			return await qlikApiRequest.call(context, 'POST', `/api/v1/apps/${appId}/copy`, body);
+		}
+		case 'export': {
+			const appId = context.getNodeParameter('appId', itemIndex) as string;
+			return await qlikApiRequest.call(context, 'POST', `/api/v1/apps/${appId}/export`, {});
+		}
+		case 'publish': {
+			const appId = context.getNodeParameter('appId', itemIndex) as string;
+			const options = context.getNodeParameter('publishOptions', itemIndex) as any;
+
+			const body: any = {};
+			if (options.spaceId) {
+				body.spaceId = options.spaceId;
+			}
+
+			return await qlikApiRequest.call(context, 'POST', `/api/v1/apps/${appId}/publish`, body);
+		}
+		case 'republish': {
+			const appId = context.getNodeParameter('appId', itemIndex) as string;
+			const options = context.getNodeParameter('publishOptions', itemIndex) as any;
+
+			const body: any = {};
+			if (options.spaceId) {
+				body.spaceId = options.spaceId;
+			}
+
+			return await qlikApiRequest.call(context, 'PUT', `/api/v1/apps/${appId}/publish`, body);
+		}
+		case 'dataLineage': {
+			const appId = context.getNodeParameter('appId', itemIndex) as string;
+			return await qlikApiRequest.call(context, 'GET', `/api/v1/apps/${appId}/data/lineage`);
+		}
+		case 'dataMetadata': {
+			const appId = context.getNodeParameter('appId', itemIndex) as string;
+			return await qlikApiRequest.call(context, 'GET', `/api/v1/apps/${appId}/data/metadata`);
+		}
+		case 'listInsights': {
+			const appId = context.getNodeParameter('appId', itemIndex) as string;
+			return await qlikApiRequest.call(context, 'GET', `/api/v1/apps/${appId}/insight-analyses`);
+		}
+		case 'recommendInsights': {
+			const appId = context.getNodeParameter('appId', itemIndex) as string;
+			const body = context.getNodeParameter('body', itemIndex) as any;
+			const payload = typeof body === 'string' ? JSON.parse(body) : body;
+
+			return await qlikApiRequest.call(
+				context,
+				'POST',
+				`/api/v1/apps/${appId}/insight-analyses/actions/recommend`,
+				payload,
+			);
+		}
+		case 'getInsightModel': {
+			const appId = context.getNodeParameter('appId', itemIndex) as string;
+			return await qlikApiRequest.call(context, 'GET', `/api/v1/apps/${appId}/insight-analyses/model`);
+		}
+		case 'mediaGetFile': {
+			const appId = context.getNodeParameter('appId', itemIndex) as string;
+			const path = context.getNodeParameter('path', itemIndex) as string;
+			const binaryProperty = context.getNodeParameter('binaryProperty', itemIndex) as string;
+
+			const response = await qlikApiRequest.call(
+				context,
+				'GET',
+				`/api/v1/apps/${appId}/media/files/${encodeMediaPath(path)}`,
+				undefined,
+				undefined,
+				true,
+				BINARY_DOWNLOAD_OPTIONS,
+			);
+
+			const data = (response as any).body ?? response;
+			const buffer = Buffer.isBuffer(data) ? data : Buffer.from(data as any);
+			const binary = await context.helpers.prepareBinaryData(buffer, path);
+
+			return { json: {}, binary: { [binaryProperty]: binary } };
+		}
+		case 'mediaUploadFile': {
+			const appId = context.getNodeParameter('appId', itemIndex) as string;
+			const path = context.getNodeParameter('path', itemIndex) as string;
+			const binaryProperty = context.getNodeParameter('binaryProperty', itemIndex) as string;
+			const contentType = context.getNodeParameter('contentType', itemIndex) as string;
+			const buffer = await context.helpers.getBinaryDataBuffer(itemIndex, binaryProperty);
+
+			return await qlikApiRequest.call(
+				context,
+				'PUT',
+				`/api/v1/apps/${appId}/media/files/${encodeMediaPath(path)}`,
+				buffer,
+				undefined,
+				false,
+				{
+					json: false,
+					headers: { 'Content-Type': contentType },
+				},
+			);
+		}
+		case 'mediaDeleteFile': {
+			const appId = context.getNodeParameter('appId', itemIndex) as string;
+			const path = context.getNodeParameter('path', itemIndex) as string;
+			await qlikApiRequest.call(
+				context,
+				'DELETE',
+				`/api/v1/apps/${appId}/media/files/${encodeMediaPath(path)}`,
+			);
+			return { success: true };
+		}
+		case 'mediaList': {
+			const appId = context.getNodeParameter('appId', itemIndex) as string;
+			const path = context.getNodeParameter('path', itemIndex) as string;
+			return await qlikApiRequest.call(
+				context,
+				'GET',
+				`/api/v1/apps/${appId}/media/list/${encodeMediaPath(path)}`,
+			);
+		}
+		case 'mediaThumbnail': {
+			const appId = context.getNodeParameter('appId', itemIndex) as string;
+			const binaryProperty = context.getNodeParameter('binaryProperty', itemIndex) as string;
+
+			const response = await qlikApiRequest.call(
+				context,
+				'GET',
+				`/api/v1/apps/${appId}/media/thumbnail`,
+				undefined,
+				undefined,
+				true,
+				BINARY_DOWNLOAD_OPTIONS,
+			);
+			const data = (response as any).body ?? response;
+			const buffer = Buffer.isBuffer(data) ? data : Buffer.from(data as any);
+			const binary = await context.helpers.prepareBinaryData(buffer, 'thumbnail.png');
+
+			return { json: {}, binary: { [binaryProperty]: binary } };
+		}
+		case 'changeObjectOwner': {
+			const appId = context.getNodeParameter('appId', itemIndex) as string;
+			const objectId = context.getNodeParameter('objectId', itemIndex) as string;
+			const ownerId = context.getNodeParameter('ownerId', itemIndex) as string;
+
+			return await qlikApiRequest.call(
+				context,
+				'POST',
+				`/api/v1/apps/${appId}/objects/${objectId}/actions/change-owner`,
+				{ ownerId },
+			);
+		}
+		case 'updateOwner': {
+			const appId = context.getNodeParameter('appId', itemIndex) as string;
+			const ownerId = context.getNodeParameter('ownerId', itemIndex) as string;
+			return await qlikApiRequest.call(context, 'PUT', `/api/v1/apps/${appId}/owner`, { ownerId });
+		}
+		case 'reloadLogs': {
+			const appId = context.getNodeParameter('appId', itemIndex) as string;
+			const returnAll = context.getNodeParameter('returnAll', itemIndex) as boolean;
+			const limit = returnAll ? undefined : (context.getNodeParameter('limit', itemIndex) as number);
+
+			return await fetchPaginatedResults(context, `/api/v1/apps/${appId}/reloads/logs`, {}, limit);
+		}
+		case 'reloadLog': {
+			const appId = context.getNodeParameter('appId', itemIndex) as string;
+			const reloadId = context.getNodeParameter('reloadId', itemIndex) as string;
+			return await qlikApiRequest.call(
+				context,
+				'GET',
+				`/api/v1/apps/${appId}/reloads/logs/${reloadId}`,
+			);
+		}
+		case 'reloadMetadata': {
+			const appId = context.getNodeParameter('appId', itemIndex) as string;
+			const reloadId = context.getNodeParameter('reloadId', itemIndex) as string;
+			return await qlikApiRequest.call(
+				context,
+				'GET',
+				`/api/v1/apps/${appId}/reloads/metadata/${reloadId}`,
+			);
+		}
+		case 'reportFiltersGetAll': {
+			const appId = context.getNodeParameter('appId', itemIndex) as string;
+			const returnAll = context.getNodeParameter('returnAll', itemIndex) as boolean;
+			const limit = returnAll ? undefined : (context.getNodeParameter('limit', itemIndex) as number);
+			const options = context.getNodeParameter('options', itemIndex) as any;
+
+			const qs: Record<string, any> = {};
+			if (options.filter) qs.filter = options.filter;
+			if (options.filterTypes) qs.filterTypes = options.filterTypes;
+			if (options.page !== undefined) qs.page = options.page;
+			if (options.sort) qs.sort = options.sort;
+			if (!returnAll && limit !== undefined) qs.limit = limit;
+
+			return await fetchPaginatedResults(
+				context,
+				`/api/v1/apps/${appId}/report-filters`,
+				qs,
+				limit,
+			);
+		}
+		case 'reportFiltersCreate': {
+			const appId = context.getNodeParameter('appId', itemIndex) as string;
+			const body = context.getNodeParameter('body', itemIndex) as any;
+			const payload = typeof body === 'string' ? JSON.parse(body) : body;
+			return await qlikApiRequest.call(context, 'POST', `/api/v1/apps/${appId}/report-filters`, payload);
+		}
+		case 'reportFiltersGet': {
+			const appId = context.getNodeParameter('appId', itemIndex) as string;
+			const filterId = context.getNodeParameter('filterId', itemIndex) as string;
+			return await qlikApiRequest.call(
+				context,
+				'GET',
+				`/api/v1/apps/${appId}/report-filters/${filterId}`,
+			);
+		}
+		case 'reportFiltersUpdate': {
+			const appId = context.getNodeParameter('appId', itemIndex) as string;
+			const filterId = context.getNodeParameter('filterId', itemIndex) as string;
+			const body = context.getNodeParameter('body', itemIndex) as any;
+			const payload = typeof body === 'string' ? JSON.parse(body) : body;
+
+			return await qlikApiRequest.call(
+				context,
+				'PATCH',
+				`/api/v1/apps/${appId}/report-filters/${filterId}`,
+				payload,
+			);
+		}
+		case 'reportFiltersDelete': {
+			const appId = context.getNodeParameter('appId', itemIndex) as string;
+			const filterId = context.getNodeParameter('filterId', itemIndex) as string;
+			await qlikApiRequest.call(context, 'DELETE', `/api/v1/apps/${appId}/report-filters/${filterId}`);
+			return { success: true };
+		}
+		case 'reportFiltersCount': {
+			const appId = context.getNodeParameter('appId', itemIndex) as string;
+			const options = context.getNodeParameter('options', itemIndex) as any;
+			const qs: Record<string, any> = {};
+			if (options.filter) qs.filter = options.filter;
+			if (options.filterTypes) qs.filterTypes = options.filterTypes;
+			return await qlikApiRequest.call(
+				context,
+				'GET',
+				`/api/v1/apps/${appId}/report-filters/actions/count`,
+				undefined,
+				qs,
+			);
+		}
+		case 'scriptsGetAll': {
+			const appId = context.getNodeParameter('appId', itemIndex) as string;
+			return await qlikApiRequest.call(context, 'GET', `/api/v1/apps/${appId}/scripts`);
+		}
+		case 'scriptsCreate': {
+			const appId = context.getNodeParameter('appId', itemIndex) as string;
+			const body = context.getNodeParameter('body', itemIndex) as any;
+			const payload = typeof body === 'string' ? JSON.parse(body) : body;
+			return await qlikApiRequest.call(context, 'POST', `/api/v1/apps/${appId}/scripts`, payload);
+		}
+		case 'scriptsGet': {
+			const appId = context.getNodeParameter('appId', itemIndex) as string;
+			const scriptId = context.getNodeParameter('scriptId', itemIndex) as string;
+			return await qlikApiRequest.call(context, 'GET', `/api/v1/apps/${appId}/scripts/${scriptId}`);
+		}
+		case 'scriptsUpdate': {
+			const appId = context.getNodeParameter('appId', itemIndex) as string;
+			const scriptId = context.getNodeParameter('scriptId', itemIndex) as string;
+			const body = context.getNodeParameter('body', itemIndex) as any;
+			const payload = typeof body === 'string' ? JSON.parse(body) : body;
+			return await qlikApiRequest.call(
+				context,
+				'PATCH',
+				`/api/v1/apps/${appId}/scripts/${scriptId}`,
+				payload,
+			);
+		}
+		case 'scriptsDelete': {
+			const appId = context.getNodeParameter('appId', itemIndex) as string;
+			const scriptId = context.getNodeParameter('scriptId', itemIndex) as string;
+			await qlikApiRequest.call(context, 'DELETE', `/api/v1/apps/${appId}/scripts/${scriptId}`);
+			return { success: true };
+		}
+		case 'moveToSpace': {
+			const appId = context.getNodeParameter('appId', itemIndex) as string;
+			const spaceId = context.getNodeParameter('spaceId', itemIndex) as string;
+			return await qlikApiRequest.call(context, 'PUT', `/api/v1/apps/${appId}/space`, { spaceId });
+		}
+		case 'removeFromSpace': {
+			const appId = context.getNodeParameter('appId', itemIndex) as string;
+			await qlikApiRequest.call(context, 'DELETE', `/api/v1/apps/${appId}/space`);
+			return { success: true };
+		}
+		case 'evaluationsGetAll': {
+			const appId = context.getNodeParameter('appId', itemIndex) as string;
+			return await qlikApiRequest.call(context, 'GET', `/api/v1/apps/${appId}/evaluations`);
+		}
+		case 'evaluationsCreate': {
+			const appId = context.getNodeParameter('appId', itemIndex) as string;
+			const body = context.getNodeParameter('body', itemIndex) as any;
+			const payload = typeof body === 'string' ? JSON.parse(body) : body;
+			return await qlikApiRequest.call(context, 'POST', `/api/v1/apps/${appId}/evaluations`, payload);
+		}
+		case 'evaluationsCompare': {
+			const baseEvaluationId = context.getNodeParameter('baseEvaluationId', itemIndex) as string;
+			const comparisonEvaluationId = context.getNodeParameter('comparisonEvaluationId', itemIndex) as string;
+			return await qlikApiRequest.call(
+				context,
+				'GET',
+				`/api/v1/apps/evaluations/${baseEvaluationId}/actions/compare/${comparisonEvaluationId}`,
+			);
+		}
+		case 'evaluationsDownloadCompare': {
+			const baseEvaluationId = context.getNodeParameter('baseEvaluationId', itemIndex) as string;
+			const comparisonEvaluationId = context.getNodeParameter('comparisonEvaluationId', itemIndex) as string;
+			const binaryProperty = context.getNodeParameter('binaryProperty', itemIndex) as string;
+
+			const response = await qlikApiRequest.call(
+				context,
+				'GET',
+				`/api/v1/apps/evaluations/${baseEvaluationId}/actions/compare/${comparisonEvaluationId}/actions/download`,
+				undefined,
+				undefined,
+				true,
+				BINARY_DOWNLOAD_OPTIONS,
+			);
+			const data = (response as any).body ?? response;
+			const buffer = Buffer.isBuffer(data) ? data : Buffer.from(data as any);
+			const binary = await context.helpers.prepareBinaryData(buffer, 'comparison');
+
+			return { json: {}, binary: { [binaryProperty]: binary } };
+		}
+		case 'evaluationGet': {
+			const evaluationId = context.getNodeParameter('evaluationId', itemIndex) as string;
+			return await qlikApiRequest.call(context, 'GET', `/api/v1/apps/evaluations/${evaluationId}`);
+		}
+		case 'evaluationDownload': {
+			const evaluationId = context.getNodeParameter('evaluationId', itemIndex) as string;
+			const binaryProperty = context.getNodeParameter('binaryProperty', itemIndex) as string;
+
+			const response = await qlikApiRequest.call(
+				context,
+				'GET',
+				`/api/v1/apps/evaluations/${evaluationId}/actions/download`,
+				undefined,
+				undefined,
+				true,
+				BINARY_DOWNLOAD_OPTIONS,
+			);
+			const data = (response as any).body ?? response;
+			const buffer = Buffer.isBuffer(data) ? data : Buffer.from(data as any);
+			const binary = await context.helpers.prepareBinaryData(buffer, 'evaluation');
+
+			return { json: {}, binary: { [binaryProperty]: binary } };
+		}
+		case 'importApp': {
+			const binaryProperty = context.getNodeParameter('binaryProperty', itemIndex) as string;
+			const options = context.getNodeParameter('options', itemIndex) as any;
+			const qs: Record<string, any> = {};
+			if (options.name) qs.name = options.name;
+			if (options.spaceId) qs.spaceId = options.spaceId;
+
+			const buffer = await context.helpers.getBinaryDataBuffer(itemIndex, binaryProperty);
+
+			return await qlikApiRequest.call(
+				context,
+				'POST',
+				'/api/v1/apps/import',
+				buffer,
+				qs,
+				false,
+				{ json: false, headers: { 'Content-Type': 'application/octet-stream' } },
+			);
+		}
+		case 'validateScript': {
+			const body = context.getNodeParameter('body', itemIndex) as any;
+			const payload = typeof body === 'string' ? JSON.parse(body) : body;
+			return await qlikApiRequest.call(context, 'POST', '/api/v1/apps/validatescript', payload);
+		}
+		case 'privileges': {
+			const options = context.getNodeParameter('options', itemIndex) as any;
+			const qs: Record<string, any> = {};
+			if (options.role) qs.role = options.role;
+			return await qlikApiRequest.call(context, 'GET', '/api/v1/apps/privileges', undefined, qs);
+		}
+		default:
+			throw new NodeOperationError(context.getNode(), `Unknown operation: ${operation}`);
+	}
+}
+
+async function handleAssistantsResource(
+	operation: string,
+	context: IExecuteFunctions,
+	itemIndex: number,
+): Promise<any> {
 	if (operation === 'getAll') {
-		const options = context.getNodeParameter('options', 0) as any;
+		const returnAll = context.getNodeParameter('returnAll', itemIndex) as boolean;
+		const limit = returnAll ? undefined : (context.getNodeParameter('limit', itemIndex) as number);
+		const options = context.getNodeParameter('options', itemIndex) as any;
 
 		const qs: any = {};
-		if (options.limit) {
-			qs.limit = options.limit;
-		}
 		if (options.next) {
 			qs.next = options.next;
 		}
@@ -196,20 +567,24 @@ async function handleAssistantsResource(operation: string, context: IExecuteFunc
 			qs.sort = options.sort;
 		}
 
-		return await qlikApiRequest.call(context, 'GET', '/api/v1/assistants', undefined, qs);
+		if (!returnAll && options.limit) {
+			qs.limit = options.limit;
+		}
+
+		return await fetchPaginatedResults(context, '/api/v1/assistants', qs, limit);
 	}
 
 	if (operation === 'get') {
-		const assistantId = context.getNodeParameter('assistantId', 0) as string;
+		const assistantId = context.getNodeParameter('assistantId', itemIndex) as string;
 		return await qlikApiRequest.call(context, 'GET', `/api/v1/assistants/${assistantId}`);
 	}
 
 	if (operation === 'create') {
-		const name = context.getNodeParameter('name', 0) as string;
-		const title = context.getNodeParameter('title', 0) as string;
-		const description = context.getNodeParameter('description', 0) as string;
-		const spaceId = context.getNodeParameter('spaceId', 0) as string;
-		const options = context.getNodeParameter('options', 0) as any;
+		const name = context.getNodeParameter('name', itemIndex) as string;
+		const title = context.getNodeParameter('title', itemIndex) as string;
+		const description = context.getNodeParameter('description', itemIndex) as string;
+		const spaceId = context.getNodeParameter('spaceId', itemIndex) as string;
+		const options = context.getNodeParameter('options', itemIndex) as any;
 
 		const body: any = { name, title, description, spaceId };
 		if (options.tags) {
@@ -231,8 +606,8 @@ async function handleAssistantsResource(operation: string, context: IExecuteFunc
 	}
 
 	if (operation === 'update') {
-		const assistantId = context.getNodeParameter('assistantId', 0) as string;
-		const body = context.getNodeParameter('body', 0) as any;
+		const assistantId = context.getNodeParameter('assistantId', itemIndex) as string;
+		const body = context.getNodeParameter('body', itemIndex) as any;
 
 		const patchOps = typeof body === 'string' ? JSON.parse(body) : body;
 
@@ -245,9 +620,9 @@ async function handleAssistantsResource(operation: string, context: IExecuteFunc
 	}
 
 	if (operation === 'search') {
-		const assistantId = context.getNodeParameter('assistantId', 0) as string;
-		const query = context.getNodeParameter('query', 0) as string;
-		const options = context.getNodeParameter('options', 0) as any;
+		const assistantId = context.getNodeParameter('assistantId', itemIndex) as string;
+		const query = context.getNodeParameter('query', itemIndex) as string;
+		const options = context.getNodeParameter('options', itemIndex) as any;
 
 		const body: any = { text: query };
 		if (options.topN) {
@@ -266,13 +641,13 @@ async function handleAssistantsResource(operation: string, context: IExecuteFunc
 	}
 
 	if (operation === 'getFeedback') {
-		const assistantId = context.getNodeParameter('assistantId', 0) as string;
+		const assistantId = context.getNodeParameter('assistantId', itemIndex) as string;
 		return await qlikApiRequest.call(context, 'GET', `/api/v1/assistants/${assistantId}/feedback`);
 	}
 
 	if (operation === 'bulkSearchSources') {
-		const assistantId = context.getNodeParameter('assistantId', 0) as string;
-		const chunkIds = context.getNodeParameter('chunkIds', 0) as any;
+		const assistantId = context.getNodeParameter('assistantId', itemIndex) as string;
+		const chunkIds = context.getNodeParameter('chunkIds', itemIndex) as any;
 
 		const body = typeof chunkIds === 'string' ? JSON.parse(chunkIds) : chunkIds;
 
@@ -285,8 +660,8 @@ async function handleAssistantsResource(operation: string, context: IExecuteFunc
 	}
 
 	if (operation === 'listStarters') {
-		const assistantId = context.getNodeParameter('assistantId', 0) as string;
-		const options = context.getNodeParameter('options', 0) as any;
+		const assistantId = context.getNodeParameter('assistantId', itemIndex) as string;
+		const options = context.getNodeParameter('options', itemIndex) as any;
 
 		const qs: any = {};
 		if (options.limit) {
@@ -297,9 +672,9 @@ async function handleAssistantsResource(operation: string, context: IExecuteFunc
 	}
 
 	if (operation === 'createStarter') {
-		const assistantId = context.getNodeParameter('assistantId', 0) as string;
-		const question = context.getNodeParameter('question', 0) as string;
-		const options = context.getNodeParameter('options', 0) as any;
+		const assistantId = context.getNodeParameter('assistantId', itemIndex) as string;
+		const question = context.getNodeParameter('question', itemIndex) as string;
+		const options = context.getNodeParameter('options', itemIndex) as any;
 
 		const body: any = { question };
 		if (options.followups) {
@@ -320,8 +695,8 @@ async function handleAssistantsResource(operation: string, context: IExecuteFunc
 	}
 
 	if (operation === 'listThreads') {
-		const assistantId = context.getNodeParameter('assistantId', 0) as string;
-		const options = context.getNodeParameter('options', 0) as any;
+		const assistantId = context.getNodeParameter('assistantId', itemIndex) as string;
+		const options = context.getNodeParameter('options', itemIndex) as any;
 
 		const qs: any = {};
 		if (options.limit) {
@@ -335,8 +710,8 @@ async function handleAssistantsResource(operation: string, context: IExecuteFunc
 	}
 
 	if (operation === 'createThread') {
-		const assistantId = context.getNodeParameter('assistantId', 0) as string;
-		const name = context.getNodeParameter('name', 0) as string;
+		const assistantId = context.getNodeParameter('assistantId', itemIndex) as string;
+		const name = context.getNodeParameter('name', itemIndex) as string;
 
 		const body: any = { name };
 
@@ -349,10 +724,10 @@ async function handleAssistantsResource(operation: string, context: IExecuteFunc
 	}
 
 	if (operation === 'streamThread') {
-		const assistantId = context.getNodeParameter('assistantId', 0) as string;
-		const threadId = context.getNodeParameter('threadId', 0) as string;
-		const messages = context.getNodeParameter('messages', 0) as any;
-		const options = context.getNodeParameter('options', 0) as any;
+		const assistantId = context.getNodeParameter('assistantId', itemIndex) as string;
+		const threadId = context.getNodeParameter('threadId', itemIndex) as string;
+		const messages = context.getNodeParameter('messages', itemIndex) as any;
+		const options = context.getNodeParameter('options', itemIndex) as any;
 
 		const body: any = {
 			messages: typeof messages === 'string' ? JSON.parse(messages) : messages,
@@ -372,9 +747,9 @@ async function handleAssistantsResource(operation: string, context: IExecuteFunc
 	}
 
 	if (operation === 'invokeThread') {
-		const assistantId = context.getNodeParameter('assistantId', 0) as string;
-		const threadId = context.getNodeParameter('threadId', 0) as string;
-		const message = context.getNodeParameter('message', 0) as string;
+		const assistantId = context.getNodeParameter('assistantId', itemIndex) as string;
+		const threadId = context.getNodeParameter('threadId', itemIndex) as string;
+		const message = context.getNodeParameter('message', itemIndex) as string;
 
 		const body = { message };
 
@@ -387,7 +762,7 @@ async function handleAssistantsResource(operation: string, context: IExecuteFunc
 	}
 
 	if (operation === 'delete') {
-		const assistantId = context.getNodeParameter('assistantId', 0) as string;
+		const assistantId = context.getNodeParameter('assistantId', itemIndex) as string;
 		await qlikApiRequest.call(context, 'DELETE', `/api/v1/assistants/${assistantId}`);
 		return { success: true };
 	}
@@ -395,11 +770,15 @@ async function handleAssistantsResource(operation: string, context: IExecuteFunc
 	throw new NodeOperationError(context.getNode(), `Unknown operation: ${operation}`);
 }
 
-async function handleAuditsResource(operation: string, context: IExecuteFunctions): Promise<any> {
+async function handleAuditsResource(
+	operation: string,
+	context: IExecuteFunctions,
+	itemIndex: number,
+): Promise<any> {
 	if (operation === 'getAll') {
-		const returnAll = context.getNodeParameter('returnAll', 0) as boolean;
-		const limit = returnAll ? undefined : (context.getNodeParameter('limit', 0) as number);
-		const options = context.getNodeParameter('options', 0) as any;
+		const returnAll = context.getNodeParameter('returnAll', itemIndex) as boolean;
+		const limit = returnAll ? undefined : (context.getNodeParameter('limit', itemIndex) as number);
+		const options = context.getNodeParameter('options', itemIndex) as any;
 
 		const qs: Record<string, any> = {};
 		if (options.eventType) {
@@ -422,7 +801,7 @@ async function handleAuditsResource(operation: string, context: IExecuteFunction
 	}
 
 	if (operation === 'get') {
-		const auditId = context.getNodeParameter('auditId', 0) as string;
+		const auditId = context.getNodeParameter('auditId', itemIndex) as string;
 		return await qlikApiRequest.call(context, 'GET', `/api/v1/audits/${auditId}`);
 	}
 
@@ -444,11 +823,15 @@ async function handleAuditsResource(operation: string, context: IExecuteFunction
 	throw new NodeOperationError(context.getNode(), `Unknown operation: ${operation}`);
 }
 
-async function handleItemsResource(operation: string, context: IExecuteFunctions): Promise<any> {
+async function handleItemsResource(
+	operation: string,
+	context: IExecuteFunctions,
+	itemIndex: number,
+): Promise<any> {
 	if (operation === 'getAll') {
-		const returnAll = context.getNodeParameter('returnAll', 0) as boolean;
-		const limit = returnAll ? undefined : (context.getNodeParameter('limit', 0) as number);
-		const options = context.getNodeParameter('options', 0) as any;
+		const returnAll = context.getNodeParameter('returnAll', itemIndex) as boolean;
+		const limit = returnAll ? undefined : (context.getNodeParameter('limit', itemIndex) as number);
+		const options = context.getNodeParameter('options', itemIndex) as any;
 
 		const qs: Record<string, any> = {};
 		if (options.name) {
@@ -471,25 +854,25 @@ async function handleItemsResource(operation: string, context: IExecuteFunctions
 	}
 
 	if (operation === 'get') {
-		const itemId = context.getNodeParameter('itemId', 0) as string;
+		const itemId = context.getNodeParameter('itemId', itemIndex) as string;
 		return await qlikApiRequest.call(context, 'GET', `/api/v1/items/${itemId}`);
 	}
 
 	if (operation === 'update') {
-		const itemId = context.getNodeParameter('itemId', 0) as string;
-		const body = context.getNodeParameter('body', 0) as any;
+		const itemId = context.getNodeParameter('itemId', itemIndex) as string;
+		const body = context.getNodeParameter('body', itemIndex) as any;
 		return await qlikApiRequest.call(context, 'PUT', `/api/v1/items/${itemId}`, body);
 	}
 
 	if (operation === 'delete') {
-		const itemId = context.getNodeParameter('itemId', 0) as string;
+		const itemId = context.getNodeParameter('itemId', itemIndex) as string;
 		await qlikApiRequest.call(context, 'DELETE', `/api/v1/items/${itemId}`);
 		return { success: true };
 	}
 
 	if (operation === 'collections') {
-		const itemId = context.getNodeParameter('itemId', 0) as string;
-		const options = context.getNodeParameter('options', 0) as any;
+		const itemId = context.getNodeParameter('itemId', itemIndex) as string;
+		const options = context.getNodeParameter('options', itemIndex) as any;
 
 		const qs: any = {};
 		if (options.limit) {
@@ -507,8 +890,8 @@ async function handleItemsResource(operation: string, context: IExecuteFunctions
 	}
 
 	if (operation === 'publishedItems') {
-		const itemId = context.getNodeParameter('itemId', 0) as string;
-		const options = context.getNodeParameter('options', 0) as any;
+		const itemId = context.getNodeParameter('itemId', itemIndex) as string;
+		const options = context.getNodeParameter('options', itemIndex) as any;
 
 		const qs: any = {};
 		if (options.limit) {
@@ -526,7 +909,7 @@ async function handleItemsResource(operation: string, context: IExecuteFunctions
 	}
 
 	if (operation === 'settings') {
-		const settingsOperation = context.getNodeParameter('settingsOperation', 0) as string;
+		const settingsOperation = context.getNodeParameter('settingsOperation', itemIndex) as string;
 
 		if (settingsOperation === 'get') {
 			const response = await qlikApiRequest.call(context, 'GET', '/api/v1/items/settings');
@@ -534,7 +917,7 @@ async function handleItemsResource(operation: string, context: IExecuteFunctions
 		}
 
 		if (settingsOperation === 'patch') {
-			const body = context.getNodeParameter('body', 0) as any;
+			const body = context.getNodeParameter('body', itemIndex) as any;
 			const response = await qlikApiRequest.call(context, 'PATCH', '/api/v1/items/settings', body);
 			return response.data || response;
 		}
@@ -611,19 +994,30 @@ export class QlikCloud implements INodeType {
 		for (let i = 0; i < items.length; i++) {
 			try {
 				if (resource === 'apps') {
-					responseData = await handleAppsResource(operation, this);
+					responseData = await handleAppsResource(operation, this, i);
 				} else if (resource === 'assistants') {
-					responseData = await handleAssistantsResource(operation, this);
+					responseData = await handleAssistantsResource(operation, this, i);
 				} else if (resource === 'audits') {
-					responseData = await handleAuditsResource(operation, this);
+					responseData = await handleAuditsResource(operation, this, i);
 				} else if (resource === 'items') {
-					responseData = await handleItemsResource(operation, this);
+					responseData = await handleItemsResource(operation, this, i);
 				}
 
-				const executionData = this.helpers.constructExecutionMetaData(
-					this.helpers.returnJsonArray(Array.isArray(responseData) ? responseData : [responseData]),
-					{ itemData: { item: i } },
-				);
+				const responses = Array.isArray(responseData) ? responseData : [responseData];
+				const executionItems: INodeExecutionData[] = responses.map((data) => {
+					if ((data as INodeExecutionData).binary !== undefined || (data as INodeExecutionData).json !== undefined) {
+						const asItem = data as INodeExecutionData;
+						if (asItem.json === undefined) {
+							asItem.json = {};
+						}
+						return asItem;
+					}
+					return { json: data as IDataObject };
+				});
+
+				const executionData = this.helpers.constructExecutionMetaData(executionItems, {
+					itemData: { item: i },
+				});
 				returnData.push(...executionData);
 			} catch (error) {
 				if (this.continueOnFail()) {
