@@ -120,6 +120,13 @@ My goal is to deliver a complete integration with the Qlik Cloud REST APIs, cove
 - **Published Items** - List published copies of an item
 - **Settings** - Get or update items service settings
 
+### Analytics Tasks
+- **Get All Tasks** - List analytics tasks with paging, sorting, and resource filtering
+- **Create / Update / Delete** - Manage task definitions, including migration via `migrateFrom`
+- **Start Task** - Trigger execution of a task with an optional source label
+- **Task Runs** - List runs for a task or for a resource, and fetch the latest run
+- **Run Logs** - Retrieve logs for a specific task run in JSON or plain text
+
 ## Authentication
 
 This node supports **Bearer Token Authentication**:
@@ -152,7 +159,7 @@ npm install n8n-nodes-qlik-cloud
 ### Node Configuration
 
 1. Add the **Qlik Cloud** node to your workflow
-2. Select the **Resource** (Apps, Assistants, Audits, or Items)
+2. Select the **Resource** (Apps, Analytics Tasks, Assistants, Audits, or Items)
 3. Select the **Operation** you want to perform
 4. Configure any required parameters
 5. Set up your Qlik Cloud API credentials
@@ -171,6 +178,7 @@ npm install n8n-nodes-qlik-cloud
 For detailed API documentation, visit:
 - [Qlik Cloud REST APIs](https://qlik.dev/apis/rest/)
 - [Apps API](https://qlik.dev/apis/rest/apps)
+- [Tasks API](https://qlik.dev/apis/rest/tasks)
 - [Items API](https://qlik.dev/apis/rest/items)
 - [Audits API](https://qlik.dev/apis/rest/audits)
 - [Assistants API](https://qlik.dev/apis/rest/assistants)
