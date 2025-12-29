@@ -12,6 +12,7 @@ import { qlikApiRequest } from './shared/transport';
 import { appDescription } from './resources/apps/index';
 import { assistantDescription } from './resources/assistants/index';
 import { auditDescription } from './resources/audits/index';
+import { analyticsTaskDescription } from './resources/tasks/index';
 import { itemDescription } from './resources/items/index';
 
 const DEFAULT_PAGE_SIZE = 100;
@@ -41,7 +42,8 @@ function extractNextCursor(response: any): string | undefined {
 	if (typeof href === 'string' && href.length) {
 		try {
 			const url = href.startsWith('http') ? new URL(href) : new URL(href, 'https://qlik.cloud');
-			return url.searchParams.get('next') ?? undefined;
+			const cursor = url.searchParams.get('next') ?? url.searchParams.get('page');
+			return cursor ?? undefined;
 		} catch {
 			return undefined;
 		}
@@ -64,6 +66,7 @@ async function fetchPaginatedResults(
 	filters: Record<string, any>,
 	limit?: number,
 	pageSize: number = DEFAULT_PAGE_SIZE,
+	cursorParamName: string = 'next',
 ): Promise<any[]> {
 	const collected: any[] = [];
 	let cursor: string | undefined;
@@ -79,7 +82,7 @@ async function fetchPaginatedResults(
 		qs.limit = chunkSize;
 
 		if (cursor) {
-			qs.next = cursor;
+			qs[cursorParamName] = cursor;
 		}
 
 		const response = await qlikApiRequest.call(context, 'GET', endpoint, undefined, qs);
@@ -546,6 +549,157 @@ async function handleAppsResource(
 	}
 }
 
+async function handleAnalyticsTasksResource(
+	operation: string,
+	context: IExecuteFunctions,
+	itemIndex: number,
+): Promise<any> {
+	switch (operation) {
+		case 'getAll': {
+			const returnAll = context.getNodeParameter('returnAll', itemIndex) as boolean;
+			const limit = returnAll ? undefined : (context.getNodeParameter('limit', itemIndex) as number);
+			const options = context.getNodeParameter('options', itemIndex) as any;
+
+			const qs: Record<string, any> = {};
+			if (options.resourceId) {
+				qs.resourceId = options.resourceId;
+			}
+			if (options.sort) {
+				qs.sort = options.sort;
+			}
+			if (options.page) {
+				qs.page = options.page;
+			}
+
+			const pageSize = limit === undefined ? 100 : Math.min(100, limit);
+
+			return await fetchPaginatedResults(context, '/api/v1/tasks', qs, limit, pageSize, 'page');
+		}
+		case 'create': {
+			const body = context.getNodeParameter('body', itemIndex) as any;
+			const payload = typeof body === 'string' ? JSON.parse(body) : body;
+			const options = context.getNodeParameter('options', itemIndex) as any;
+
+			const qs: Record<string, any> = {};
+			if (options.migrateFrom) {
+				qs.migrateFrom = options.migrateFrom;
+			}
+
+			return await qlikApiRequest.call(context, 'POST', '/api/v1/tasks', payload, qs);
+		}
+		case 'get': {
+			const taskId = context.getNodeParameter('taskId', itemIndex) as string;
+			return await qlikApiRequest.call(context, 'GET', `/api/v1/tasks/${taskId}`);
+		}
+		case 'update': {
+			const taskId = context.getNodeParameter('taskId', itemIndex) as string;
+			const body = context.getNodeParameter('body', itemIndex) as any;
+			const payload = typeof body === 'string' ? JSON.parse(body) : body;
+
+			return await qlikApiRequest.call(context, 'PUT', `/api/v1/tasks/${taskId}`, payload);
+		}
+		case 'delete': {
+			const taskId = context.getNodeParameter('taskId', itemIndex) as string;
+			await qlikApiRequest.call(context, 'DELETE', `/api/v1/tasks/${taskId}`);
+			return { success: true };
+		}
+		case 'start': {
+			const taskId = context.getNodeParameter('taskId', itemIndex) as string;
+			const source = context.getNodeParameter('source', itemIndex) as string;
+			const qs: Record<string, any> = {};
+			if (source) {
+				qs.source = source;
+			}
+
+			return await qlikApiRequest.call(context, 'POST', `/api/v1/tasks/${taskId}/actions/start`, {}, qs);
+		}
+		case 'getRuns': {
+			const taskId = context.getNodeParameter('taskId', itemIndex) as string;
+			const returnAll = context.getNodeParameter('returnAll', itemIndex) as boolean;
+			const limit = returnAll ? undefined : (context.getNodeParameter('limit', itemIndex) as number);
+			const options = context.getNodeParameter('options', itemIndex) as any;
+
+			const qs: Record<string, any> = {};
+			if (options.page) {
+				qs.page = options.page;
+			}
+			if (options.sort) {
+				qs.sort = options.sort;
+			}
+
+			const pageSize = limit === undefined ? 100 : Math.min(100, limit);
+			return await fetchPaginatedResults(
+				context,
+				`/api/v1/tasks/${taskId}/runs`,
+				qs,
+				limit,
+				pageSize,
+				'page',
+			);
+		}
+		case 'getLastRun': {
+			const taskId = context.getNodeParameter('taskId', itemIndex) as string;
+			return await qlikApiRequest.call(context, 'GET', `/api/v1/tasks/${taskId}/runs/last`);
+		}
+		case 'getRunLog': {
+			const taskId = context.getNodeParameter('taskId', itemIndex) as string;
+			const runId = context.getNodeParameter('runId', itemIndex) as string;
+			const responseFormat = context.getNodeParameter('responseFormat', itemIndex) as string;
+
+			if (responseFormat === 'text') {
+				const response = await qlikApiRequest.call(
+					context,
+					'GET',
+					`/api/v1/tasks/${taskId}/runs/${runId}/log`,
+					undefined,
+					undefined,
+					false,
+					{ headers: { Accept: 'text/plain' }, json: false },
+				);
+
+				const logContent = typeof response === 'string' ? response : JSON.stringify(response);
+				return { logContent };
+			}
+
+			return await qlikApiRequest.call(
+				context,
+				'GET',
+				`/api/v1/tasks/${taskId}/runs/${runId}/log`,
+				undefined,
+				undefined,
+				false,
+				{ headers: { Accept: 'application/json' } },
+			);
+		}
+		case 'getResourceRuns': {
+			const resourceId = context.getNodeParameter('resourceId', itemIndex) as string;
+			const returnAll = context.getNodeParameter('returnAll', itemIndex) as boolean;
+			const limit = returnAll ? undefined : (context.getNodeParameter('limit', itemIndex) as number);
+			const options = context.getNodeParameter('options', itemIndex) as any;
+
+			const qs: Record<string, any> = {};
+			if (options.page) {
+				qs.page = options.page;
+			}
+			if (options.sort) {
+				qs.sort = options.sort;
+			}
+
+			const pageSize = limit === undefined ? 100 : Math.min(100, limit);
+			return await fetchPaginatedResults(
+				context,
+				`/api/v1/tasks/resources/${resourceId}/runs`,
+				qs,
+				limit,
+				pageSize,
+				'page',
+			);
+		}
+		default:
+			throw new NodeOperationError(context.getNode(), `Unknown operation: ${operation}`);
+	}
+}
+
 async function handleAssistantsResource(
 	operation: string,
 	context: IExecuteFunctions,
@@ -934,7 +1088,7 @@ export class QlikCloud implements INodeType {
 		group: ['transform'],
 		version: 1,
 		subtitle: '={{$parameter["resource"] + ": " + $parameter["operation"]}}',
-		description: 'Interact with Qlik Cloud APIs (Apps, Items, Audits, Assistants)',
+		description: 'Interact with Qlik Cloud APIs (Apps, Analytics Tasks, Items, Audits, Assistants)',
 		defaults: {
 			name: 'Qlik Cloud',
 		},
@@ -959,6 +1113,11 @@ export class QlikCloud implements INodeType {
 						description: 'Manage Qlik Cloud applications',
 					},
 					{
+						name: 'Analytics Tasks',
+						value: 'analyticsTasks',
+						description: 'Manage analytics tasks and runs',
+					},
+					{
 						name: 'Assistants',
 						value: 'assistants',
 						description: 'Interact with AI assistants',
@@ -977,6 +1136,7 @@ export class QlikCloud implements INodeType {
 				default: 'apps',
 			},
 			...appDescription,
+			...analyticsTaskDescription,
 			...assistantDescription,
 			...auditDescription,
 			...itemDescription,
@@ -995,6 +1155,8 @@ export class QlikCloud implements INodeType {
 			try {
 				if (resource === 'apps') {
 					responseData = await handleAppsResource(operation, this, i);
+				} else if (resource === 'analyticsTasks') {
+					responseData = await handleAnalyticsTasksResource(operation, this, i);
 				} else if (resource === 'assistants') {
 					responseData = await handleAssistantsResource(operation, this, i);
 				} else if (resource === 'audits') {
