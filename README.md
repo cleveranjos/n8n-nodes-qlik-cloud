@@ -1,6 +1,6 @@
 # n8n-nodes-qlik-cloud
 
-This package contains an n8n community node for integrating with **Qlik Cloud** REST APIs.
+This package contains an n8n community node for integrating with **Qlik Cloud** REST APIs. It is a personal project and is not supported or endorsed by Qlik.
 
 ## Scope
 
