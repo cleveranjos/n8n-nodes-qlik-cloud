@@ -14,6 +14,7 @@ import { assistantDescription } from './resources/assistants/index';
 import { auditDescription } from './resources/audits/index';
 import { analyticsTaskDescription } from './resources/tasks/index';
 import { itemDescription } from './resources/items/index';
+import { dataAlertDescription } from './resources/data-alerts/index';
 
 const DEFAULT_PAGE_SIZE = 100;
 const BINARY_DOWNLOAD_OPTIONS: Partial<IHttpRequestOptions> = {
@@ -97,6 +98,147 @@ async function fetchPaginatedResults(
 
 function encodeMediaPath(path: string): string {
 	return encodeURIComponent(path).replace(/%2F/g, '/');
+}
+
+async function handleDataAlertsResource(
+	operation: string,
+	context: IExecuteFunctions,
+	itemIndex: number,
+): Promise<any> {
+	switch (operation) {
+		case 'getAll': {
+			const returnAll = context.getNodeParameter('returnAll', itemIndex) as boolean;
+			const limit = returnAll ? undefined : (context.getNodeParameter('limit', itemIndex) as number);
+			const options = context.getNodeParameter('options', itemIndex) as any;
+
+			const qs: Record<string, any> = {};
+			if (options.appId) qs.appID = options.appId;
+			if (options.conditionId) qs.conditionId = options.conditionId;
+			if (options.ownerId) qs.ownerId = options.ownerId;
+			if (options.ownerName) qs.ownerName = options.ownerName;
+			if (options.role) qs.role = options.role;
+			if (options.next) qs.next = options.next;
+			if (options.prev) qs.prev = options.prev;
+			if (options.offset !== undefined) qs.offset = options.offset;
+
+			const pageSize = limit === undefined ? DEFAULT_PAGE_SIZE : Math.min(DEFAULT_PAGE_SIZE, limit);
+			return await fetchPaginatedResults(context, '/api/v1/data-alerts', qs, limit, pageSize);
+		}
+		case 'create': {
+			const body = context.getNodeParameter('body', itemIndex) as any;
+			const payload = typeof body === 'string' ? JSON.parse(body) : body;
+			return await qlikApiRequest.call(context, 'POST', '/api/v1/data-alerts', payload);
+		}
+		case 'get': {
+			const alertId = context.getNodeParameter('alertId', itemIndex) as string;
+			return await qlikApiRequest.call(context, 'GET', `/api/v1/data-alerts/${alertId}`);
+		}
+		case 'update': {
+			const alertId = context.getNodeParameter('alertId', itemIndex) as string;
+			const body = context.getNodeParameter('body', itemIndex) as any;
+			const payload = typeof body === 'string' ? JSON.parse(body) : body;
+			return await qlikApiRequest.call(context, 'PATCH', `/api/v1/data-alerts/${alertId}`, payload);
+		}
+		case 'delete': {
+			const alertId = context.getNodeParameter('alertId', itemIndex) as string;
+			await qlikApiRequest.call(context, 'DELETE', `/api/v1/data-alerts/${alertId}`);
+			return { success: true };
+		}
+		case 'getCondition': {
+			const alertId = context.getNodeParameter('alertId', itemIndex) as string;
+			return await qlikApiRequest.call(context, 'GET', `/api/v1/data-alerts/${alertId}/condition`);
+		}
+		case 'getExecution': {
+			const alertId = context.getNodeParameter('alertId', itemIndex) as string;
+			const executionId = context.getNodeParameter('executionId', itemIndex) as string;
+			return await qlikApiRequest.call(
+				context,
+				'GET',
+				`/api/v1/data-alerts/${alertId}/executions/${executionId}`,
+			);
+		}
+		case 'deleteExecution': {
+			const alertId = context.getNodeParameter('alertId', itemIndex) as string;
+			const executionId = context.getNodeParameter('executionId', itemIndex) as string;
+			await qlikApiRequest.call(
+				context,
+				'DELETE',
+				`/api/v1/data-alerts/${alertId}/executions/${executionId}`,
+			);
+			return { success: true };
+		}
+		case 'recipientStats': {
+			const alertId = context.getNodeParameter('alertId', itemIndex) as string;
+			return await qlikApiRequest.call(
+				context,
+				'GET',
+				`/api/v1/data-alerts/${alertId}/recipient-stats`,
+			);
+		}
+		case 'listExecutions': {
+			const taskId = context.getNodeParameter('taskId', itemIndex) as string;
+			const returnAll = context.getNodeParameter('returnAll', itemIndex) as boolean;
+			const limit = returnAll ? undefined : (context.getNodeParameter('limit', itemIndex) as number);
+			const options = context.getNodeParameter('options', itemIndex) as any;
+
+			const qs: Record<string, any> = {};
+			if (options.next) qs.next = options.next;
+			if (options.prev) qs.prev = options.prev;
+			if (options.offset !== undefined) qs.offset = options.offset;
+
+			const pageSize = limit === undefined ? DEFAULT_PAGE_SIZE : Math.min(DEFAULT_PAGE_SIZE, limit);
+			return await fetchPaginatedResults(
+				context,
+				`/api/v1/data-alerts/${taskId}/executions`,
+				qs,
+				limit,
+				pageSize,
+			);
+		}
+		case 'getExecutionEvaluation': {
+			const taskId = context.getNodeParameter('taskId', itemIndex) as string;
+			const executionId = context.getNodeParameter('executionId', itemIndex) as string;
+			return await qlikApiRequest.call(
+				context,
+				'GET',
+				`/api/v1/data-alerts/${taskId}/executions/${executionId}/evaluations`,
+			);
+		}
+		case 'getExecutionStats': {
+			const taskId = context.getNodeParameter('taskId', itemIndex) as string;
+			const options = context.getNodeParameter('options', itemIndex) as any;
+			const qs: Record<string, any> = {};
+			if (options.period) qs.period = options.period;
+
+			return await qlikApiRequest.call(
+				context,
+				'GET',
+				`/api/v1/data-alerts/${taskId}/executions/stats`,
+				undefined,
+				qs,
+			);
+		}
+		case 'trigger': {
+			const body = context.getNodeParameter('body', itemIndex) as any;
+			const payload = typeof body === 'string' ? JSON.parse(body) : body;
+			return await qlikApiRequest.call(context, 'POST', '/api/v1/data-alerts/actions/trigger', payload);
+		}
+		case 'validate': {
+			const body = context.getNodeParameter('body', itemIndex) as any;
+			const payload = typeof body === 'string' ? JSON.parse(body) : body;
+			return await qlikApiRequest.call(context, 'POST', '/api/v1/data-alerts/actions/validate', payload);
+		}
+		case 'getSettings': {
+			return await qlikApiRequest.call(context, 'GET', '/api/v1/data-alerts/settings');
+		}
+		case 'updateSettings': {
+			const body = context.getNodeParameter('body', itemIndex) as any;
+			const payload = typeof body === 'string' ? JSON.parse(body) : body;
+			return await qlikApiRequest.call(context, 'PUT', '/api/v1/data-alerts/settings', payload);
+		}
+		default:
+			throw new NodeOperationError(context.getNode(), `Unknown operation: ${operation}`);
+	}
 }
 
 async function handleAppsResource(
@@ -1088,7 +1230,7 @@ export class QlikCloud implements INodeType {
 		group: ['transform'],
 		version: 1,
 		subtitle: '={{$parameter["resource"] + ": " + $parameter["operation"]}}',
-		description: 'Interact with Qlik Cloud APIs (Apps, Analytics Tasks, Items, Audits, Assistants)',
+		description: 'Interact with Qlik Cloud APIs (Apps, Analytics Tasks, Items, Audits, Assistants, Data Alerts)',
 		defaults: {
 			name: 'Qlik Cloud',
 		},
@@ -1123,6 +1265,11 @@ export class QlikCloud implements INodeType {
 						description: 'Interact with AI assistants',
 					},
 					{
+						name: 'Data Alerts',
+						value: 'dataAlerts',
+						description: 'Manage data alert tasks and settings',
+					},
+					{
 						name: 'Audits',
 						value: 'audits',
 						description: 'Access audit logs and events',
@@ -1138,6 +1285,7 @@ export class QlikCloud implements INodeType {
 			...appDescription,
 			...analyticsTaskDescription,
 			...assistantDescription,
+			...dataAlertDescription,
 			...auditDescription,
 			...itemDescription,
 		],
@@ -1159,6 +1307,8 @@ export class QlikCloud implements INodeType {
 					responseData = await handleAnalyticsTasksResource(operation, this, i);
 				} else if (resource === 'assistants') {
 					responseData = await handleAssistantsResource(operation, this, i);
+				} else if (resource === 'dataAlerts') {
+					responseData = await handleDataAlertsResource(operation, this, i);
 				} else if (resource === 'audits') {
 					responseData = await handleAuditsResource(operation, this, i);
 				} else if (resource === 'items') {

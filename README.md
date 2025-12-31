@@ -4,74 +4,74 @@ This package contains an n8n community node for integrating with **Qlik Cloud** 
 
 ## Scope
 
-My goal is to deliver a complete integration with the Qlik Cloud REST APIs, covering all available endpoints. This is still a work in progress because Qlik Cloud continues to add new endpoints and methods. As of 12/29/2025, the integration includes 564 methods across 64 endpoints, and 72 calls were already implemented.
+My goal is to deliver a complete integration with the Qlik Cloud REST APIs, covering all available endpoints. This is still a work in progress because Qlik Cloud continues to add new endpoints and methods. As of 12/29/2025, the integration includes 564 methods across 64 endpoints, and 82 calls were already implemented.
 
-- /apis/rest/.well-known: 1
-- /apis/rest/api-keys: 7
-- /apis/rest/apps: 45
-- /apis/rest/assistants: 29
-- /apis/rest/audits: 7
-- /apis/rest/automation-connections: 8
-- /apis/rest/automation-connectors: 1
-- /apis/rest/automations: 18
-- /apis/rest/automl-deployments: 1
-- /apis/rest/automl-predictions: 6
-- /apis/rest/banners: 2
-- /apis/rest/brands: 12
-- /apis/rest/collections: 11
-- /apis/rest/conditions: 11
-- /apis/rest/consumption: 1
-- /apis/rest/core/ip-policies: 5
-- /apis/rest/csp-origins: 6
-- /apis/rest/csrf-token: 1
-- /apis/rest/data-alerts: 16
-- /apis/rest/data-assets: 5
-- /apis/rest/data-connections: 9
-- /apis/rest/data-credentials: 5
-- /apis/rest/data-files: 12
-- /apis/rest/data-qualities: 3
-- /apis/rest/data-sets: 6
-- /apis/rest/data-sources: 5
-- /apis/rest/data-stores: 10
-- /apis/rest/di-projects: 19
-- /apis/rest/direct-access-agents: 15
-- /apis/rest/encryption: 10
-- /apis/rest/extensions: 7
-- /apis/rest/glossaries: 24
-- /apis/rest/groups: 8
-- /apis/rest/identity-providers: 8
-- /apis/rest/items: 8
-- /apis/rest/knowledgebases: 18
-- /apis/rest/licenses: 9
-- /apis/rest/lineage-graphs: 8
-- /apis/rest/login: 2
-- /apis/rest/ml: 42
-- /apis/rest/notes: 2
-- /apis/rest/notifications: 1
-- /apis/rest/oauth: 3
-- /apis/rest/oauth-clients: 11
-- /apis/rest/oauth-tokens: 2
-- /apis/rest/pagination-sorting-filtering: 1
-- /apis/rest/questions: 2
-- /apis/rest/quotas: 2
-- /apis/rest/rate-limiting: 1
-- /apis/rest/reload-tasks: 5
-- /apis/rest/reloads: 4
-- /apis/rest/report-templates: 7
-- /apis/rest/reports: 3
-- /apis/rest/roles: 5
-- /apis/rest/sharing-tasks: 13
-- /apis/rest/spaces: 17
-- /apis/rest/tasks: 10
-- /apis/rest/temp-contents: 5
-- /apis/rest/tenants: 6
-- /apis/rest/themes: 7
-- /apis/rest/transports: 7
-- /apis/rest/ui-config: 7
-- /apis/rest/users: 9
-- /apis/rest/web-integrations: 5
-- /apis/rest/web-notifications: 6
-- /apis/rest/webhooks: 10 
+- [ ] /apis/rest/.well-known: 1
+- [ ] /apis/rest/api-keys: 7
+- [x] /apis/rest/apps: 45
+- [x] /apis/rest/assistants: 29
+- [x] /apis/rest/audits: 7
+- [ ] /apis/rest/automation-connections: 8
+- [ ] /apis/rest/automation-connectors: 1
+- [ ] /apis/rest/automations: 18
+- [ ] /apis/rest/automl-deployments: 1
+- [ ] /apis/rest/automl-predictions: 6
+- [ ] /apis/rest/banners: 2
+- [ ] /apis/rest/brands: 12
+- [ ] /apis/rest/collections: 11
+- [ ] /apis/rest/conditions: 11
+- [ ] /apis/rest/consumption: 1
+- [ ] /apis/rest/core/ip-policies: 5
+- [ ] /apis/rest/csp-origins: 6
+- [ ] /apis/rest/csrf-token: 1
+- [x] /apis/rest/data-alerts: 16
+- [ ] /apis/rest/data-assets: 5
+- [ ] /apis/rest/data-connections: 9
+- [ ] /apis/rest/data-credentials: 5
+- [ ] /apis/rest/data-files: 12
+- [ ] /apis/rest/data-qualities: 3
+- [ ] /apis/rest/data-sets: 6
+- [ ] /apis/rest/data-sources: 5
+- [ ] /apis/rest/data-stores: 10
+- [ ] /apis/rest/di-projects: 19
+- [ ] /apis/rest/direct-access-agents: 15
+- [ ] /apis/rest/encryption: 10
+- [ ] /apis/rest/extensions: 7
+- [ ] /apis/rest/glossaries: 24
+- [ ] /apis/rest/groups: 8
+- [ ] /apis/rest/identity-providers: 8
+- [x] /apis/rest/items: 8
+- [ ] /apis/rest/knowledgebases: 18
+- [ ] /apis/rest/licenses: 9
+- [ ] /apis/rest/lineage-graphs: 8
+- [ ] /apis/rest/login: 2
+- [ ] /apis/rest/ml: 42
+- [ ] /apis/rest/notes: 2
+- [ ] /apis/rest/notifications: 1
+- [ ] /apis/rest/oauth: 3
+- [ ] /apis/rest/oauth-clients: 11
+- [ ] /apis/rest/oauth-tokens: 2
+- [ ] /apis/rest/pagination-sorting-filtering: 1
+- [ ] /apis/rest/questions: 2
+- [ ] /apis/rest/quotas: 2
+- [ ] /apis/rest/rate-limiting: 1
+- [x] /apis/rest/reload-tasks: 5
+- [ ] /apis/rest/reloads: 4
+- [ ] /apis/rest/report-templates: 7
+- [ ] /apis/rest/reports: 3
+- [ ] /apis/rest/roles: 5
+- [ ] /apis/rest/sharing-tasks: 13
+- [ ] /apis/rest/spaces: 17
+- [ ] /apis/rest/tasks: 10
+- [ ] /apis/rest/temp-contents: 5
+- [ ] /apis/rest/tenants: 6
+- [ ] /apis/rest/themes: 7
+- [ ] /apis/rest/transports: 7
+- [ ] /apis/rest/ui-config: 7
+- [ ] /apis/rest/users: 9
+- [ ] /apis/rest/web-integrations: 5
+- [ ] /apis/rest/web-notifications: 6
+- [ ] /apis/rest/webhooks: 10 
 
 
 ### Apps Management
@@ -126,6 +126,14 @@ My goal is to deliver a complete integration with the Qlik Cloud REST APIs, cove
 - **Start Task** - Trigger execution of a task with an optional source label
 - **Task Runs** - List runs for a task or for a resource, and fetch the latest run
 - **Run Logs** - Retrieve logs for a specific task run in JSON or plain text
+
+### Data Alerts
+- **Alert Tasks** - List, create, get, update, or delete data alert tasks
+- **Conditions & Recipients** - Retrieve alert conditions and recipient statistics
+- **Executions** - Get or delete individual executions, list executions, and fetch evaluation details
+- **Execution Stats** - Retrieve aggregated execution statistics for a task
+- **Actions** - Trigger alert tasks manually and validate task definitions
+- **Settings** - Get or update tenant-level data alert settings
 
 ## Authentication
 
