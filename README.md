@@ -4,7 +4,7 @@ This package contains an n8n community node for integrating with **Qlik Cloud** 
 
 ## Scope
 
-My goal is to deliver a complete integration with the Qlik Cloud REST APIs, covering all available endpoints. This is still a work in progress because Qlik Cloud continues to add new endpoints and methods. As of 12/29/2025, the integration includes 564 methods across 64 endpoints, and 82 calls were already implemented.
+My goal is to deliver a complete integration with the Qlik Cloud REST APIs, covering all available endpoints. This is still a work in progress because Qlik Cloud continues to add new endpoints and methods. As of 12/29/2025, the integration includes 564 methods across 64 endpoints, and 98 calls were already implemented.
 
 - [ ] /apis/rest/.well-known: 1
 - [ ] /apis/rest/api-keys: 7
