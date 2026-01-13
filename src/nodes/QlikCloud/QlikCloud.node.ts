@@ -1240,13 +1240,44 @@ export class QlikCloud implements INodeType {
 			{
 				name: 'qlikCloudApi',
 				required: true,
+				displayOptions: {
+					show: {
+						authentication: [
+							'apiToken',
+						],
+					},
+				},
 			},
 			{
 				name: 'qlikCloudOAuth2Api',
 				required: true,
+				displayOptions: {
+					show: {
+						authentication: [
+							'oAuth2',
+						],
+					},
+				},
 			},
 		],
 		properties: [
+			{
+				displayName: 'Authentication',
+				name: 'authentication',
+				type: 'options',
+				options: [
+					{
+						name: 'API Token',
+						value: 'apiToken',
+					},
+					{
+						name: 'OAuth2',
+						value: 'oAuth2',
+					},
+				],
+				default: 'apiToken',
+				description: 'Choose how to authenticate to Qlik Cloud',
+			},
 			{
 				displayName: 'Resource',
 				name: 'resource',

@@ -14,20 +14,20 @@ export async function qlikApiRequest(
 	returnFullResponse: boolean = false,
 	extraOptions: Partial<IHttpRequestOptions> = {},
 ): Promise<any> {
-	const credentials = await this.getCredentials('qlikCloudApi');
+	const authenticationMethod = this.getNodeParameter('authentication', 0) as 'apiToken' | 'oAuth2';
+	const credentialType = authenticationMethod === 'oAuth2' ? 'qlikCloudOAuth2Api' : 'qlikCloudApi';
+	const credentials = await this.getCredentials(credentialType);
 
 	if (!credentials) {
 		throw new NodeApiError(this.getNode(), {
-			message: 'No credentials found for Qlik Cloud API',
+			message: `No credentials found for Qlik Cloud API (${authenticationMethod === 'oAuth2' ? 'OAuth2' : 'API Token'})`,
 		} as any);
 	}
 
 	const baseUrl = (credentials.baseUrl as string).replace(/\/+$/, '');
-	const accessToken = credentials.accessToken as string;
 	const url = `${baseUrl}${endpoint.startsWith('/') ? endpoint : `/${endpoint}`}`;
 
-	const headers = {
-		Authorization: `Bearer ${accessToken}`,
+	const baseHeaders = {
 		'Content-Type': 'application/json',
 		...(extraOptions.headers || {}),
 	};
@@ -36,17 +36,29 @@ export async function qlikApiRequest(
 		method,
 		url,
 		qs,
-		json: extraOptions.json ?? true,
 		returnFullResponse,
 		...extraOptions,
-		headers,
+		json: extraOptions.json ?? true,
+		headers: baseHeaders,
 	};
+
+	if (authenticationMethod === 'apiToken') {
+		const accessToken = credentials.accessToken as string;
+		options.headers = {
+			Authorization: `Bearer ${accessToken}`,
+			...baseHeaders,
+		};
+	}
 
 	if (body !== undefined) {
 		options.body = body;
 	}
 
 	try {
+		if (authenticationMethod === 'oAuth2') {
+			return await this.helpers.httpRequestWithAuthentication.call(this, credentialType, options);
+		}
+
 		return await this.helpers.httpRequest(options);
 	} catch (error) {
 		const errMessage = error instanceof Error ? error.message : typeof error === 'string' ? error : JSON.stringify(error);
