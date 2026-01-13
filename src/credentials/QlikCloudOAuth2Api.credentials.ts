@@ -5,7 +5,7 @@ const DEFAULT_SCOPES = ['openid', 'profile', 'email', 'offline_access'];
 export class QlikCloudOAuth2Api implements ICredentialType {
 	name = 'qlikCloudOAuth2Api';
 	displayName = 'Qlik Cloud OAuth2 API';
-	documentationUrl = 'https://qlik.dev/authenticate/';
+	documentationUrl = 'https://qlik.dev/authenticate/oauth/';
 	extends = ['oAuth2Api'];
 
 	properties: INodeProperties[] = [

@@ -1,4 +1,5 @@
 import type {
+	IAdditionalCredentialOptions,
 	IExecuteFunctions,
 	IHttpRequestMethods,
 	IHttpRequestOptions,
@@ -24,8 +25,30 @@ export async function qlikApiRequest(
 		} as any);
 	}
 
-	const baseUrl = (credentials.baseUrl as string).replace(/\/+$/, '');
-	const url = `${baseUrl}${endpoint.startsWith('/') ? endpoint : `/${endpoint}`}`;
+	const rawBaseUrl = credentials.baseUrl as string | undefined;
+	if (!rawBaseUrl) {
+		throw new NodeApiError(this.getNode(), {
+			message: 'Base URL is missing in the selected Qlik Cloud credentials',
+		} as any);
+	}
+
+	let parsedBase: URL;
+	try {
+		parsedBase = new URL(rawBaseUrl);
+	} catch {
+		throw new NodeApiError(this.getNode(), {
+			message: 'Base URL is not a valid URL. Expected format: https://{tenant}.{region}.qlikcloud.com',
+		} as any);
+	}
+
+	if (parsedBase.protocol !== 'https:') {
+		throw new NodeApiError(this.getNode(), {
+			message: 'Base URL must use https://',
+		} as any);
+	}
+
+	const normalizedBaseUrl = `${parsedBase.origin}${parsedBase.pathname.replace(/\/+$/, '')}`;
+	const url = new URL(endpoint.startsWith('/') ? endpoint : `/${endpoint}`, `${normalizedBaseUrl}/`).toString();
 
 	const baseHeaders = {
 		'Content-Type': 'application/json',
@@ -56,7 +79,21 @@ export async function qlikApiRequest(
 
 	try {
 		if (authenticationMethod === 'oAuth2') {
-			return await this.helpers.httpRequestWithAuthentication.call(this, credentialType, options);
+			const oauthBase = `${parsedBase.origin}/oauth`;
+			const additionalCredentialOptions: IAdditionalCredentialOptions = {
+				credentialsDecrypted: {
+					...credentials,
+					authUrl: (credentials as any).authUrl || `${oauthBase}/authorize`,
+					accessTokenUrl: (credentials as any).accessTokenUrl || `${oauthBase}/token`,
+				},
+			};
+
+			return await this.helpers.httpRequestWithAuthentication.call(
+				this,
+				credentialType,
+				options,
+				additionalCredentialOptions,
+			);
 		}
 
 		return await this.helpers.httpRequest(options);
