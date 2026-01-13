@@ -1,5 +1,4 @@
 import type {
-	IAdditionalCredentialOptions,
 	IExecuteFunctions,
 	IHttpRequestMethods,
 	IHttpRequestOptions,
@@ -79,20 +78,10 @@ export async function qlikApiRequest(
 
 	try {
 		if (authenticationMethod === 'oAuth2') {
-			const oauthBase = `${parsedBase.origin}/oauth`;
-			const additionalCredentialOptions: IAdditionalCredentialOptions = {
-				credentialsDecrypted: {
-					...credentials,
-					authUrl: (credentials as any).authUrl || `${oauthBase}/authorize`,
-					accessTokenUrl: (credentials as any).accessTokenUrl || `${oauthBase}/token`,
-				},
-			};
-
 			return await this.helpers.httpRequestWithAuthentication.call(
 				this,
 				credentialType,
 				options,
-				additionalCredentialOptions,
 			);
 		}
 
