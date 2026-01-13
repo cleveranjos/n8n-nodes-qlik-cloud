@@ -1241,6 +1241,10 @@ export class QlikCloud implements INodeType {
 				name: 'qlikCloudApi',
 				required: true,
 			},
+			{
+				name: 'qlikCloudOAuth2Api',
+				required: true,
+			},
 		],
 		properties: [
 			{
